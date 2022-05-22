@@ -261,6 +261,65 @@ def deletePage():
     finished(filename, "Page delete", deleterWindow)
 
 
+def interceptPages():
+    interceptWindow = tk.Tk()
+    interceptWindow.title("PDF continuous page intercept")
+
+    tk.Label(interceptWindow, text="Intercept continuous pages inside an existing PDF").grid(row=0, column=0, columnspan=3, padx=10, pady=3, sticky=stickyFill)
+
+    tk.Label(interceptWindow, text="Select PDF file to edit:").grid(row=1, column=0, padx=10, pady=3)
+    updateFile = tk.Entry(interceptWindow)
+    updateFile.grid(row=1, column=1, sticky=stickyFill, pady=5, padx=5)
+    tk.Button(interceptWindow, text="Browse...", command=lambda entry=updateFile, window=interceptWindow: filePicker(entry, window)).grid(row=1, column=2, pady=5, padx=5, sticky=stickyFill)
+
+    tk.Label(interceptWindow, text="Start page to Intercept:").grid(row=2, column=0, padx=10, pady=3)
+    startPageToIntercept = tk.Entry(interceptWindow)
+    startPageToIntercept.grid(row=2, column=1, sticky=stickyFill, pady=5, padx=5)
+
+    tk.Label(interceptWindow, text="End page to Intercept:").grid(row=3, column=0, padx=10, pady=3)
+    endPageToIntercept = tk.Entry(interceptWindow)
+    endPageToIntercept.grid(row=3, column=1, sticky=stickyFill, pady=5, padx=5)
+
+    tk.Button(interceptWindow, text="Intercept!", command=lambda: interceptWindow.quit()).grid(row=4, column=0, columnspan=3, padx=5, pady=10, sticky=stickyFill)
+
+    interceptWindow.mainloop()
+
+    filename = updateFile.get()
+    filename = filename[:-4] + '-updated.pdf'
+    updateFile = checkExist(updateFile.get())
+    startPageToIntercept = int(startPageToIntercept.get())
+    endPageToIntercept = int(endPageToIntercept.get())
+
+    if startPageToIntercept == 0:
+        popup("invalid page number, must be greater than 0")
+    if endPageToIntercept < startPageToIntercept:
+        popup("invalid page number, end page must be greater than start page")
+
+    originalPDF = PyPDF2.PdfFileReader(updateFile)
+
+    updatedPDF = PyPDF2.PdfFileWriter()
+    updatedPDF.cloneDocumentFromReader(originalPDF)
+    try:
+        updatedPDF.getPage(startPageToIntercept - 1)
+        updatedPDF.getPage(endPageToIntercept - 1)
+    except IndexError:
+        popup("Please check if page number is within range")
+
+    outputFile = open(filename, 'wb')
+
+    pdfOut = PyPDF2.PdfFileWriter()
+
+    for i in range(updatedPDF.getNumPages()):
+        if i >= startPageToIntercept - 1 and i <= endPageToIntercept - 1:
+            pdfOut.addPage(updatedPDF.getPage(i))
+
+    pdfOut.write(outputFile)
+    outputFile.close()
+
+    interceptWindow.destroy()
+    finished(filename, "Page intercept", interceptWindow)
+
+
 def checkExist(fileName):
     try:
         openedFile = open(fileName, 'rb')
@@ -287,7 +346,8 @@ tk.Button(selector, text="Merge PDFs", command=merge).grid(row=1, column=1, stic
 tk.Button(selector, text="Update a single page", command=pageUpdate).grid(row=2, column=1, sticky=stickyFill, pady=3, padx=5)
 tk.Button(selector, text="Insert a page into an existing PDF", command=insertPage, padx=20).grid(row=3, column=1, sticky=stickyFill, pady=3, padx=5)
 tk.Button(selector, text="Delete a single page", command=deletePage).grid(row=4, column=1, sticky=stickyFill, pady=3, padx=5)
-tk.Button(selector, text="Instructions", command=instructions).grid(row=5, column=1, sticky=stickyFill, pady=3, padx=5)
+tk.Button(selector, text="Intercept continuous pages", command=interceptPages).grid(row=5, column=1, sticky=stickyFill, pady=3, padx=5)
+# tk.Button(selector, text="Instructions", command=instructions).grid(row=6, column=1, sticky=stickyFill, pady=3, padx=5)
 
 
 selector.protocol("WM_DELETE_WINDOW", sys.exit)
